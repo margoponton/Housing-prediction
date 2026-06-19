@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Cargar modelo
-modelo = joblib.load("modelo.pkl")
 
 st.set_page_config(page_title="Predicción de Precio de Vivienda")
 
