@@ -1,89 +1,64 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import os
+
+st.title("Housing Prediction")
 
 # Cargar modelo
-modelo = joblib.load("modelo.pkl")
+@st.cache_resource
+def load_model():
+    model_path = "modelo.pkl"
+    if not os.path.exists(model_path):
+        st.error(f"No se encontro el archivo {model_path} en el repositorio.")
+        st.info("Asegurese de subir el archivo modelo.pkl a GitHub")
+        st.stop()
+    try:
+        return joblib.load(model_path)
+    except Exception as e:
+        st.error(f"Error al cargar el modelo: {e}")
+        st.stop()
 
-st.set_page_config(page_title="Predicción de Precio de Vivienda")
+model = load_model()
+st.success("Modelo cargado correctamente")
 
-st.title("🏠 Predicción de Precio Mediano de Vivienda")
+# Inputs del usuario
+st.header("Ingrese los datos de la vivienda")
 
-st.write("Ingrese los valores de las características de la vivienda:")
+col1, col2 = st.columns(2)
 
-# Entradas del usuario
-longitud = st.number_input("Longitud", value=-122.23)
-latitud = st.number_input("Latitud", value=37.88)
+with col1:
+    crim = st.number_input("CRIM (Tasa de criminalidad)", value=0.0, format="%.4f")
+    zn = st.number_input("ZN (Zonas residenciales)", value=0.0, format="%.2f")
+    indus = st.number_input("INDUS (Proporcion industrial)", value=0.0, format="%.2f")
+    chas = st.number_input("CHAS (Cerca del rio)", min_value=0, max_value=1, value=0)
+    nox = st.number_input("NOX (Concentracion de oxido nitrico)", value=0.0, format="%.4f")
 
-edad_mediana_vivienda = st.slider(
-    "Edad Mediana de la Vivienda",
-    min_value=1,
-    max_value=100,
-    value=25
-)
+with col2:
+    rm = st.number_input("RM (Habitaciones promedio)", value=6.0, format="%.2f")
+    age = st.number_input("AGE (Edad de las viviendas)", value=0.0, format="%.2f")
+    dis = st.number_input("DIS (Distancia a centros de empleo)", value=0.0, format="%.4f")
+    rad = st.number_input("RAD (Accesibilidad a autopistas)", value=0)
+    tax = st.number_input("TAX (Impuesto por propiedad)", value=0.0, format="%.2f")
 
-total_habitaciones = st.number_input(
-    "Total Habitaciones",
-    min_value=1,
-    value=2000
-)
+lstat = st.number_input("LSTAT (% poblacion de bajo nivel)", value=0.0, format="%.2f")
 
-total_dormitorios = st.number_input(
-    "Total Dormitorios",
-    min_value=1,
-    value=400
-)
+if st.button("Predecir Precio"):
+    input_data = pd.DataFrame({
+        'CRIM': [crim],
+        'ZN': [zn],
+        'INDUS': [indus],
+        'CHAS': [chas],
+        'NOX': [nox],
+        'RM': [rm],
+        'AGE': [age],
+        'DIS': [dis],
+        'RAD': [rad],
+        'TAX': [tax],
+        'LSTAT': [lstat]
+        # Agrega aqui las demas columnas que necesita tu modelo si faltan
+    })
+    
+    prediction = model.predict(input_data)
+    st.success(f"Precio estimado: {prediction[0]:,.2f}")
 
-poblacion = st.number_input(
-    "Población",
-    min_value=1,
-    value=1000
-)
-
-hogares = st.number_input(
-    "Hogares",
-    min_value=1,
-    value=350
-)
-
-ingreso_mediano = st.number_input(
-    "Ingreso Mediano",
-    min_value=0.0,
-    value=4.5,
-    step=0.1
-)
-
-proximidad_oceano = st.selectbox(
-    "Proximidad al Océano",
-    [
-        "<1H OCEAN",
-        "INLAND",
-        "NEAR OCEAN",
-        "NEAR BAY",
-        "ISLAND"
-    ]
-)
-
-# Crear DataFrame
-datos = pd.DataFrame({
-    "longitud": [longitud],
-    "latitud": [latitud],
-    "edad_mediana_vivienda": [edad_mediana_vivienda],
-    "total_habitaciones": [total_habitaciones],
-    "total_dormitorios": [total_dormitorios],
-    "poblacion": [poblacion],
-    "hogares": [hogares],
-    "ingreso_mediano": [ingreso_mediano],
-    "proximidad_oceano": [proximidad_oceano]
-})
-
-# Botón de predicción
-if st.button("Predecir"):
-    prediccion = modelo.predict(datos)[0]
-
-    st.success(
-        f"💰 Precio Mediano Estimado de la Vivienda: ${prediccion:,.2f}"
-    )
-
-    st.subheader("Datos ingresados")
-    st.dataframe(datos)
